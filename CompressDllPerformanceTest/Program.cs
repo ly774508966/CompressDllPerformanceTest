@@ -15,10 +15,10 @@ namespace ComparePressAndSerailzer
 
 
             string str = File.ReadAllText(@"source.txt");
+            Console.WriteLine("SourceFileSize\t"+str.Length.ToString("N0"));
 
             var snappybin = SnappyCompress(str);
             var lz4bin = LZ4Compress(str);
-
             var gzipbin = GZipCompress(str);
 
             #region codetimer 测试代码性能
