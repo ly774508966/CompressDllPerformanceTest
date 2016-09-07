@@ -2,9 +2,11 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using ZstdNet;
 
 namespace ComparePressAndSerailzer
 {
@@ -13,13 +15,14 @@ namespace ComparePressAndSerailzer
         static void Main(string[] args)
         {
 
-
-            string str = File.ReadAllText(@"source.txt");
-            Console.WriteLine("SourceFileSize\t"+str.Length.ToString("N0"));
+            string fileName = "source.SearchFerryTicketRS.txt";//source
+            string str = File.ReadAllText(fileName);
+            Console.WriteLine("SourceFileSize\t" + str.Length.ToString("N0"));
 
             var snappybin = SnappyCompress(str);
             var lz4bin = LZ4Compress(str);
             var gzipbin = GZipCompress(str);
+            var zstdbin = ZstdCompress(str, false, true);
 
             #region codetimer 测试代码性能
             CodeTimer.Initialize();
@@ -28,12 +31,15 @@ namespace ComparePressAndSerailzer
 
             CodeTimer.Time("SnappyCompress\t" + snappybin.Length.ToString("N0"), count, () => { SnappyCompress(str); });
             CodeTimer.Time("LZ4Compress\t" + lz4bin.Length.ToString("N0"), count, () => { LZ4Compress(str); });
+            CodeTimer.Time("ZstdCompress\t" + zstdbin.Length.ToString("N0"), count, () => { ZstdCompress(str, false, true); });
             CodeTimer.Time("GZipCompress\t" + gzipbin.Length.ToString("N0"), count, () => { GZipCompress(str); });
-
+          
 
             CodeTimer.Time("SnappyUnCompress", count, () => { SnappyUnCompress(snappybin); });
             CodeTimer.Time("LZ4UnCompress", count, () => { LZ4UnCompress(lz4bin); });
+            CodeTimer.Time("ZstdUnCompress", count, () => { ZstdUnCompress(zstdbin); });
             CodeTimer.Time("GZipUnCompress", count, () => { GZipUnCompress(gzipbin); });
+          
 
             #endregion
 
@@ -117,9 +123,33 @@ namespace ComparePressAndSerailzer
 
 
 
+        public static byte[] ZstdCompress(string input, bool bestCompression, bool useDictionary)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(input);
+
+            //var dict = Encoding.UTF8.GetBytes("ZstdCompress"); //useDictionary ? BuildDictionary() : null;
+            byte[] compressed;
+
+            using (var compressor = new Compressor(compressionLevel:1))//压缩等级从1-22 有枚举 如:Compressor.MaxCompressionLevel
+            {
+                compressed = compressor.Wrap(data);
+            }
+
+            return compressed;
+        }
 
 
+        public static string ZstdUnCompress(byte[] data)
+        {
+            //var dict = Encoding.UTF8.GetBytes("ZstdCompress");//BuildDictionary();
+            byte[] decompressed;
+            using (var decompressor = new Decompressor())
+            {
+                decompressed = decompressor.Unwrap(data);
+            }
 
+            return Encoding.UTF8.GetString(decompressed);
+        }
 
 
         public static class CodeTimer
